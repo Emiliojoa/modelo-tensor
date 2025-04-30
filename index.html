@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Ejemplo de TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Ejemplo de TensorFlow.js</h1>
+            <p class="formula">Fórmula: <span>y = 2x + 6</span></p>
+        </header>
+
+        <main>
+            <section class="card training-section">
+                <h2>Entrenamiento del Modelo</h2>
+                <p class="description">Entrena la red neuronal para aprender la relación entre entradas y salidas.</p>
+                <button id="trainButton" class="btn btn-primary" onclick="entrenarModelo()">
+                    <span class="btn-text">Entrenar Modelo</span>
+                    <span class="loader"></span>
+                </button>
+            </section>
+
+            <section class="card prediction-section">
+                <h2>Hacer una Predicción</h2>
+                <p class="description">Ingresa un valor para x y predice su valor correspondiente de y.</p>
+                <div class="input-group">
+                    <input type="number" id="inputX" placeholder="Ingresa un valor para x">
+                    <button id="predictButton" class="btn btn-secondary" onclick="predecir()">Predecir</button>
+                </div>
+            </section>
+
+            <section class="card result-section">
+                <h2>Resultado</h2>
+                <div id="resultado" class="result">El modelo aún no ha sido entrenado.</div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Desarrollado con TensorFlow.js</p>
+        </footer>
+    </div>
+</body>
+
+<script>
+    let modelo; // Variable global donde guardaremos el modelo
+
+    // Función para entrenar el modelo
+    async function entrenarModelo() {
+        // Actualizar la interfaz para mostrar el estado de entrenamiento
+        const botonEntrenar = document.getElementById('trainButton');
+        const resultado = document.getElementById('resultado');
+
+        botonEntrenar.classList.add('loading');
+        resultado.innerText = 'Entrenando el modelo...';
+        resultado.className = 'result loading';
+
+        try {
+            // Crear un modelo secuencial
+            modelo = tf.sequential();
+
+            // Agregar una capa densa (neurona) con una sola unidad de salida
+            modelo.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+
+            // Compilar el modelo con función de pérdida y optimizador
+            modelo.compile({
+                loss: 'meanSquaredError',  // Error cuadrático medio
+                optimizer: 'sgd'           // Descenso por gradiente estocástico
+            });
+
+            // Crear los datos de entrada (x) de -6 a 2
+            const xs = tf.tensor2d([-6, -5, -4, -3, -2, -1, 0, 1, 2], [9, 1]);
+
+            // Crear los valores de salida (y) usando la fórmula y = 2x + 6
+            const ys = tf.tensor2d(xs.dataSync().map(x => 2 * x + 6), [9, 1]);
+
+            // Entrenar el modelo durante al menos 350 épocas
+            await modelo.fit(xs, ys, { epochs: 350 });
+
+            // Mostrar mensaje cuando el modelo esté listo
+            resultado.innerText = 'Modelo entrenado exitosamente. Ahora puedes hacer predicciones.';
+            resultado.className = 'result success';
+        } catch (error) {
+            resultado.innerText = `Error al entrenar el modelo: ${error.message}`;
+            resultado.className = 'result error';
+        } finally {
+            botonEntrenar.classList.remove('loading');
+        }
+    }
+
+    // Función para hacer una predicción
+    function predecir() {
+        const resultado = document.getElementById('resultado');
+
+        // Verificar si el modelo fue entrenado
+        if (!modelo) {
+            resultado.innerText = 'Debes entrenar el modelo primero.';
+            resultado.className = 'result error';
+            return;
+        }
+
+        // Obtener el valor de X desde el input
+        const x = parseFloat(document.getElementById('inputX').value);
+
+        // Validar que el usuario haya ingresado un número
+        if (isNaN(x)) {
+            resultado.innerText = 'Por favor, ingresa un número válido.';
+            resultado.className = 'result error';
+            return;
+        }
+
+        try {
+            // Crear un tensor con el valor de entrada
+            const entrada = tf.tensor2d([x], [1, 1]);
+
+            // Usar el modelo para hacer la predicción
+            const salida = modelo.predict(entrada).dataSync()[0];
+
+            // Mostrar el resultado en pantalla con formato
+            resultado.innerText = `Para x = ${x}, y predicho = ${salida.toFixed(4)}`;
+            resultado.className = 'result success';
+        } catch (error) {
+            resultado.innerText = `Error al hacer la predicción: ${error.message}`;
+            resultado.className = 'result error';
+        }
+    }
+
+    // Agregar eventos cuando el documento esté cargado
+    document.addEventListener('DOMContentLoaded', () => {
+        const campoEntrada = document.getElementById('inputX');
+
+        // Permitir que la tecla Enter dispare la predicción
+        campoEntrada.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                predecir();
+            }
+        });
+
+        // Retroalimentación visual para los botones
+        const botones = document.querySelectorAll('.btn');
+        botones.forEach(boton => {
+            boton.addEventListener('mousedown', () => {
+                boton.style.transform = 'scale(0.98)';
+            });
+
+            boton.addEventListener('mouseup', () => {
+                boton.style.transform = 'scale(1)';
+            });
+
+            boton.addEventListener('mouseleave', () => {
+                boton.style.transform = 'scale(1)';
+            });
+        });
+    });
+</script>
+
+</html>
